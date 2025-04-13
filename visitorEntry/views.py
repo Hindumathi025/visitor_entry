@@ -1,33 +1,50 @@
-from django.shortcuts import render, redirect
-from django.http import HttpResponse
-import random
-
+from django.shortcuts import render
+from django.views.decorators.csrf import csrf_exempt
+import urllib.request
+import json
 def visitor_entry(request):
-    if request.method == "POST":
-        name = request.POST.get("name")
-        mobile = request.POST.get("mobile")
-
-        # Generate OTP
-        otp = random.randint(100000, 999999)
-        request.session["otp"] = otp  # Store OTP in session
-        request.session["mobile"] = mobile  # Store mobile number in session
-
-        # Simulate sending OTP (Print in Console)
-        print(f"OTP for {mobile} is {otp}")  # In production, use an SMS API
-
-        return redirect("otp_verification")  # Redirect to OTP page
-
+    
     return render(request, "index.html")
 
-def otp_verification(request):
-    if request.method == "POST":
-        entered_otp = request.POST.get("otp")
-        mobile = request.session.get("mobile")
-        correct_otp = request.session.get("otp")
+@csrf_exempt  # For API endpoint (use proper auth in production)
+def verify_phone_email(request):
+    if request.method == 'POST':
+        try:
+            print("........................verify")
+            # Get JSON URL from request
+            data = json.loads(request.body)
+            print("data",data)
+            user_json_url = data.get('user_json_url')
 
-        if correct_otp and int(entered_otp) == correct_otp:
-            return render(request, "thank_you.html")
-        else:
-            return HttpResponse("Invalid OTP, please try again.")
+            # Fetch user data from Phone.Email
+            with urllib.request.urlopen(user_json_url) as url:
+                user_data = json.loads(url.read().decode())
 
-    return render(request, "otp.html", {"mobile": request.session.get("mobile")})
+            # Extract user information
+            user_country_code = user_data["user_country_code"]
+            user_phone_number = user_data["user_phone_number"]
+            user_first_name = user_data.get("user_first_name", "")
+            user_last_name = user_data.get("user_last_name", "")
+            print("user phone number",user_phone_number)
+            # Here you would typically:
+            # 1. Create or update user in your database
+            # 2. Implement login logic
+            # 3. Set session/cookie for authenticated user
+
+            return JsonResponse({
+                'success': True,
+                'message': 'Verification successful',
+                'user_data': {
+                    'phone': f"{user_country_code}{user_phone_number}",
+                    'name': f"{user_first_name} {user_last_name}".strip()
+                }
+            })
+
+        except Exception as e:
+            return JsonResponse({
+                'success': False,
+                'error': str(e)
+            }, status=400)
+
+    return JsonResponse({'error': 'Invalid request method'}, status=405)
+ 
