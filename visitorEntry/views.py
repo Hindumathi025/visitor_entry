@@ -8,6 +8,15 @@ def visitor_entry(request):
 
 @csrf_exempt  # For API endpoint (use proper auth in production)
 def verify_phone_email(request):
+    """Verifies phone and email from JSON provided in the request and returns user data.
+    Parameters:
+        - request (HTTPRequest): The HTTP request object containing method and JSON body.
+    Returns:
+        - JsonResponse: A JSON response indicating success or failure, with the user's phone and name on success.
+    Processing Logic:
+        - Extracts user JSON URL from POST request body to retrieve user data.
+        - Constructs phone number using country code and phone number.
+        - Handles exceptions by returning error messages in JSON format."""
     if request.method == 'POST':
         try:
             print("........................verify")
